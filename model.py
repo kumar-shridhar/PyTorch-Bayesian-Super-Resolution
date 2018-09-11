@@ -2,9 +2,9 @@ import torch.nn as nn
 import torch.nn.init as init
 from utils.BBBlayers import BBBConv2d
 
-class BBBLeNet(nn.Module):
+class BBBNet(nn.Module):
     def __init__(self, upscale_factor ):
-        super(BBBLeNet, self).__init__()
+        super(BBBNet, self).__init__()
 
         self.relu = nn.ReLU()
         self.conv1 = BBBConv2d(1, 64, (5, 5), (1, 1), (2, 2))
