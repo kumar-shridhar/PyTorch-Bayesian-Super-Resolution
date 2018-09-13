@@ -4,15 +4,16 @@ from math import log10
 import os
 import math
 import torch
-import torch.nn as nn
+#import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from model import BBBNet
+from utils.BBBlayers import GaussianVariationalInference
 from data import get_training_set, get_test_set
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch Super Res Example')
-parser.add_argument('--upscale_factor', type=int, required=True, help="super resolution upscale factor")
+parser.add_argument('--upscale_factor', type=int, default=3, help="super resolution upscale factor")
 parser.add_argument('--batchSize', type=int, default=64, help='training batch size')
 parser.add_argument('--testBatchSize', type=int, default=10, help='testing batch size')
 parser.add_argument('--num_epochs', type=int, default=2, help='number of epochs to train for')
@@ -45,7 +46,8 @@ testing_data_loader = DataLoader(dataset=test_set, num_workers=opt.threads, batc
 
 print('===> Building model')
 model = BBBNet(upscale_factor=opt.upscale_factor).to(device)
-criterion = nn.MSELoss()
+
+vi = GaussianVariationalInference(torch.nn.MSELoss())
 
 optimizer = optim.Adam(model.parameters(), lr=opt.lr)
 
@@ -71,6 +73,8 @@ def train(epoch):
     for iteration, batch in enumerate(training_data_loader, 1):
         input, target = batch[0].to(device), batch[1].to(device)
 
+
+
         if opt.beta_type is "Blundell":
             beta = 2 ** (m - (iteration + 1)) / (2 ** m - 1)
         elif opt.beta_type is "Soenderby":
@@ -80,8 +84,9 @@ def train(epoch):
         else:
             beta = 0
 
+        outputs, kl = model.probforward(input)
         optimizer.zero_grad()
-        loss = criterion(model(input), target)
+        loss = vi(outputs, target,kl,beta )
         epoch_loss += loss.item()
         loss.backward()
         optimizer.step()
@@ -94,12 +99,22 @@ def train(epoch):
 def test():
     avg_psnr = 0
     model.eval()
+    m = math.ceil(len(train_set) / opt.batch_size)
     with torch.no_grad():
         for batch in testing_data_loader:
             input, target = batch[0].to(device), batch[1].to(device)
 
-            prediction = model(input)
-            mse = criterion(prediction, target)
+            if opt.beta_type is "Blundell":
+                beta = 2 ** (m - (iteration + 1)) / (2 ** m - 1)
+            elif opt.beta_type is "Soenderby":
+                beta = min(epoch / (opt.num_epochs // 4), 1)
+            elif opt.beta_type is "Standard":
+                beta = 1 / m
+            else:
+                beta = 0
+
+            prediction, kl = model.probforward(input)
+            mse = vi(prediction, target, kl, beta)
             psnr = 10 * log10(1 / mse.item())
             avg_psnr += psnr
     print("===> Avg. PSNR: {:.4f} dB".format(avg_psnr / len(testing_data_loader)))
