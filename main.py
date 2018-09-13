@@ -14,9 +14,9 @@ from data import get_training_set, get_test_set
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch Super Res Example')
 parser.add_argument('--upscale_factor', type=int, default=3, help="super resolution upscale factor")
-parser.add_argument('--batchSize', type=int, default=64, help='training batch size')
+parser.add_argument('--batch_size', type=int, default=1024, help='training batch size')
 parser.add_argument('--testBatchSize', type=int, default=10, help='testing batch size')
-parser.add_argument('--num_epochs', type=int, default=2, help='number of epochs to train for')
+parser.add_argument('--num_epochs', type=int, default=500, help='number of epochs to train for')
 parser.add_argument('--num_samples', default=10, type=int, help='Number of samples')
 parser.add_argument('--beta_type', default="Blundell", type=str, help='Beta type')
 parser.add_argument('--lr', type=float, default=0.01, help='Learning Rate. Default=0.01')
@@ -41,7 +41,7 @@ device = torch.device("cuda" if opt.cuda else "cpu")
 print('===> Loading datasets')
 train_set = get_training_set(opt.upscale_factor)
 test_set = get_test_set(opt.upscale_factor)
-training_data_loader = DataLoader(dataset=train_set, num_workers=opt.threads, batch_size=opt.batchSize, shuffle=True)
+training_data_loader = DataLoader(dataset=train_set, num_workers=opt.threads, batch_size=opt.batch_size, shuffle=True)
 testing_data_loader = DataLoader(dataset=test_set, num_workers=opt.threads, batch_size=opt.testBatchSize, shuffle=False)
 
 print('===> Building model')
@@ -105,7 +105,7 @@ def test():
             input, target = batch[0].to(device), batch[1].to(device)
 
             if opt.beta_type is "Blundell":
-                beta = 2 ** (m - (iteration + 1)) / (2 ** m - 1)
+                beta = 2 ** (m - (opt.testBatchSize + 1)) / (2 ** m - 1)
             elif opt.beta_type is "Soenderby":
                 beta = min(epoch / (opt.num_epochs // 4), 1)
             elif opt.beta_type is "Standard":
@@ -127,7 +127,7 @@ def checkpoint(epoch):
 
 
 def save_checkpoint(state):
-    model_out_path = "model_epoch_{}.pth".format(epoch)
+    model_out_path = "./checkpoints/"+"model_epoch_{}.pth".format(epoch)
     torch.save(state, model_out_path)
     print("Checkpoint saved to {}".format(model_out_path))
 
