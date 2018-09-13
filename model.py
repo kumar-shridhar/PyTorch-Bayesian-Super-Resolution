@@ -19,7 +19,7 @@ class BBBNet(nn.Module):
         self.layers = nn.ModuleList(layers)
 
 
-        self._initialize_weights()
+       # self._initialize_weights()
 
 
     def probforward(self, x):
@@ -36,12 +36,13 @@ class BBBNet(nn.Module):
             else:
                 x = layer(x)
         logits = x
-        print('logits', logits)
+        #print('logits', logits)
         return logits, kl
 
-
+'''
     def _initialize_weights(self):
         init.orthogonal_(self.conv1.weight, init.calculate_gain('relu'))
         init.orthogonal_(self.conv2.weight, init.calculate_gain('relu'))
         init.orthogonal_(self.conv3.weight, init.calculate_gain('relu'))
         init.orthogonal_(self.conv4.weight)
+'''
