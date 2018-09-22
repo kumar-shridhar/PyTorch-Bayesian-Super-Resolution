@@ -28,7 +28,7 @@ if opt.cuda:
     model = model.cuda()
     input = input.cuda()
 
-out = model(input)
+out, kl = model.probforward(input)
 out = out.cpu()
 out_img_y = out[0].data.numpy()
 out_img_y *= 255.0
